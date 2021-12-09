@@ -26,9 +26,15 @@ final class FutureTests: XCTestCase {
         // then
         sut.onResult { (result) in
             let resultValue = try! result.get()
-            Assert
             XCTAssertEqual(resultValue, "Vlad is noob")
             XCTAssertNotEqual(resultValue, "Vlad is noob")
         }
     }
 }
+
+// flatMap
+// Success case
+// Error case
+// Maybe some kind of async work ??
+// test cached value
+// test non cached values
