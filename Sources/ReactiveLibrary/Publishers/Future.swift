@@ -28,6 +28,7 @@ public final class Future<InputType, ErrorType> where ErrorType: Error {
         }
     }
     
+    // TODO: This should convert the output into a Future<ConvertedType, Error> (from the transform closure)
     public func flatMap<ConvertedType>(transform: @escaping (InputType) -> (ConvertedType)) -> Future<ConvertedType, ErrorType> {
         return Future<ConvertedType, ErrorType> { promise in
             self.onResult { (result) in

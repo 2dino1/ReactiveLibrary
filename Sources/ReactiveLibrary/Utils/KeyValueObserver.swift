@@ -10,7 +10,7 @@ import Foundation
 internal final class KeyValueObserver<ObserveType>: NSObject {
     private let block: (ObserveType) -> ()
     private let keyPath: String
-    private var object: NSObject
+    private let object: NSObject
     
     internal init(object: NSObject, keyPath: String, _ block: @escaping (ObserveType) -> ()) {
         self.block = block

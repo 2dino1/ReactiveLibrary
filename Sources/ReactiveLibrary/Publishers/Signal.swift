@@ -13,7 +13,7 @@ public final class Signal<InputType, ErrorType> where ErrorType: Error {
     public typealias SignalResultCompletion = (Result<InputType, ErrorType>) -> Void
     
     private var callbacks: [SignalResultCompletion] = []
-    private  var observers: [Any] = []
+    private var observers: [Any] = []
     
     // MARK: - Public Methods
     public static func createPipe() -> (SignalResultCompletion, Signal<InputType, ErrorType>) {
@@ -28,6 +28,18 @@ public final class Signal<InputType, ErrorType> where ErrorType: Error {
     
     public func updateObservers(with observer: Any) {
         observers.append(observer)
+    }
+    
+    public func map<OutputType>(transform: @escaping (InputType) -> OutputType) -> Signal<OutputType, ErrorType> {
+        let (sink, signal) = Signal<OutputType, ErrorType>.createPipe()
+        signal.updateObservers(with: self)
+            
+        onResult { (result) in
+            let transformedValue = result.map(transform)
+            sink(transformedValue)
+        }
+        
+        return signal
     }
     
     // MARK: - Private Methods

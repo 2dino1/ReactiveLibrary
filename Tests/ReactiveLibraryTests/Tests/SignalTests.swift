@@ -10,16 +10,21 @@ import XCTest
 
 internal final class SignalTests: XCTestCase {
     private var sut: Signal<String, Error>!
-    private var signalHolder: SignalHolderMock!
+    private var signalHolderSink: SignalHolderMock!
+    private weak var weakSut: Signal<String, Error>!
+    
+    private var mapSut: Signal<Int?, Error>!
     
     override func setUp() {
-        signalHolder = SignalHolderMock()
-        sut = signalHolder.signal()
+        signalHolderSink = SignalHolderMock()
+        sut = signalHolderSink.signal()
+        weakSut = sut
     }
     
     override func tearDown() {
         sut = nil
-        signalHolder = nil
+        signalHolderSink = nil
+        mapSut = nil
     }
 }
  
@@ -27,13 +32,13 @@ internal final class SignalTests: XCTestCase {
 extension SignalTests {
     internal func testPipeSingleValue() {
         // then
-        signalHolder.signal().onResult { result in
+        sut.onResult { result in
             let value = try! result.get()
             XCTAssertEqual(value, "Vlad")
         }
         
         // when
-        signalHolder.propertyToChange = "Vlad"
+        signalHolderSink.propertyToChange = "Vlad"
     }
     
     internal func testPipeMultipleValues() {
@@ -41,7 +46,7 @@ extension SignalTests {
         var results: [String] = []
         
         // then
-        signalHolder.signal().onResult { result in
+        sut.onResult { result in
             results.append((try? result.get()) ?? "")
             if results.count == 3 {
                 XCTAssertEqual(["Vlad", "Dino", "Vladutz"], results)
@@ -49,10 +54,49 @@ extension SignalTests {
         }
         
         // when
-        signalHolder.propertyToChange = "Vlad"
-        signalHolder.propertyToChange = "Dino"
-        signalHolder.propertyToChange = "Vladutz"
+        generatePipeInputForMultipleValuesTest()
+    }
+    
+    private func generatePipeInputForMultipleValuesTest() {
+        signalHolderSink.propertyToChange = "Vlad"
+        signalHolderSink.propertyToChange = "Dino"
+        signalHolderSink.propertyToChange = "Vladutz"
+    }
+    
+    internal func testSignalLeaks() {
+        // when
+        sut = nil
+        
+        // then
+        XCTAssertNil(weakSut)
+    }
+    
+    internal func testSignalMapOperator() {
+        // given
+        var results: [Int] = []
+        
+        // then
+        mapSut = sut.map { (value) in Int(value) }
+        
+        mapSut.onResult { (result) in
+            results.append((try? result.get()) ?? -1)
+            if results.count == 5 {
+                XCTAssertEqual(results, [1, 10, -1, -1, 5])
+            }
+        }
+        
+        // when
+        generatePipeInputForMapOperatorTest()
+    }
+    
+    private func generatePipeInputForMapOperatorTest() {
+        signalHolderSink.propertyToChange = "1"
+        signalHolderSink.propertyToChange = "10"
+        signalHolderSink.propertyToChange = "a"
+        signalHolderSink.propertyToChange = "c"
+        signalHolderSink.propertyToChange = "5"
     }
 }
 
-// TODO: Tests for leaks, but cannot leak them here for some reason ?
+// TODO: Implement map for signal
+// TODO: Implement an AnyCancellable for this signal, implicit subscription and unsubscription
