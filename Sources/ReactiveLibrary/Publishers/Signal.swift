@@ -12,7 +12,8 @@ public final class Signal<InputType, ErrorType> where ErrorType: Error {
     public typealias SignalResult = Result<InputType, ErrorType>
     public typealias SignalResultCompletion = (Result<InputType, ErrorType>) -> Void
     
-    private var callbacks: [SignalResultCompletion] = []
+    private typealias Token = UUID
+    private var callbacks: [Token: SignalResultCompletion] = [:]
     private var observers: [Any] = []
     
     // MARK: - Public Methods
@@ -22,8 +23,12 @@ public final class Signal<InputType, ErrorType> where ErrorType: Error {
         return (callback, signal)
     }
     
-    public func onResult(completion: @escaping SignalResultCompletion) {
-        callbacks.append(completion)
+    public func subscribe(completion: @escaping SignalResultCompletion) -> Disposable {
+        let token = UUID()
+        callbacks.updateValue(completion, forKey: token)
+        return Disposable {
+            self.callbacks.removeValue(forKey: token)
+        }
     }
     
     public func updateObservers(with observer: Any) {
@@ -32,19 +37,19 @@ public final class Signal<InputType, ErrorType> where ErrorType: Error {
     
     public func map<OutputType>(transform: @escaping (InputType) -> OutputType) -> Signal<OutputType, ErrorType> {
         let (sink, signal) = Signal<OutputType, ErrorType>.createPipe()
-        signal.updateObservers(with: self)
-            
-        onResult { (result) in
+        
+        let disposable = subscribe { (result) in
             let transformedValue = result.map(transform)
             sink(transformedValue)
         }
+        updateObservers(with: self)
         
         return signal
     }
     
     // MARK: - Private Methods
     private func send(value: SignalResult) {
-        for callback in callbacks {
+        for callback in callbacks.values {
             callback(value)
         }
     }
